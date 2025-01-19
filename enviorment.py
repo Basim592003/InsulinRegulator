@@ -9,7 +9,6 @@ class BloodGlucoseEnvironment(gym.Env):
     def __init__(self):
         super(BloodGlucoseEnvironment, self).__init__()
 
-        # --- ENVIRONMENT PARAMETERS ---
         self.bg_min = 70
         self.bg_max = 300
         self.hypo_threshold = 80
@@ -21,8 +20,6 @@ class BloodGlucoseEnvironment(gym.Env):
         self.sleep_end = 7
         self.pending_glucose_rise = 0 
         self.pending_insulin_effect = 0  
-
-        # Action space: insulin dosage
         self.action_space = spaces.Box(low=0.0, high=20.0, shape=(1,), dtype=np.float32)
         self.observation_space = spaces.Dict({
             "blood_glucose": spaces.Box(low=self.bg_min, high=self.bg_max, shape=(1,), dtype=np.float32),
@@ -39,7 +36,7 @@ class BloodGlucoseEnvironment(gym.Env):
     def step(self, action):
         insulin_units = action[0]
 
-        # --- Insulin on Board (IOB) ---
+        
         self.iob = self._update_iob(insulin_units)
 
         if self.pending_glucose_rise > 0:
@@ -54,34 +51,28 @@ class BloodGlucoseEnvironment(gym.Env):
         
         self.pending_glucose_rise = glucose_rise
 
-        # --- Apply Insulin Effect Immediately ---
+        
         insulin_effect = self._calculate_insulin_effect(self.iob)
         self.current_bg -= insulin_effect  
 
-        # --- Basal Glucose Production ---
         basal_rate = self._get_basal_rate()
         self.current_bg += basal_rate
 
-        # --- Normalize Blood Glucose ---
         self.current_bg = np.clip(self.current_bg, self.bg_min, self.bg_max)
 
-        # --- Update Time and Sleep Status ---
         self.current_hour = (self.current_hour + 1) % 24
         self.is_sleep = 1 if self.current_hour >= self.sleep_start or self.current_hour < self.sleep_end else 0
 
-        # --- Calculate Reward ---
         reward = self._calculate_reward()
         self.cumulative_reward += reward        
 
-        # --- Update Observations ---
         self.bg_history = np.roll(self.bg_history, -1)
         self.bg_history[-1] = self.current_bg
         self.insulin_history = np.roll(self.insulin_history, -1)
         self.insulin_history[-1] = insulin_units
         observation = self._get_observation()
 
-        # --- Check for Termination ---
-        terminated = self.current_hour == 0  # End of day
+        terminated = self.current_hour == 0 
         return observation, reward, terminated, False, {}
 
 
@@ -94,8 +85,8 @@ class BloodGlucoseEnvironment(gym.Env):
         self.cumulative_reward = 0
         self.bg_history = np.full(3, self.current_bg)
         self.insulin_history = np.zeros(3)
-        self.pending_glucose_rise = 0  # Tracks pending glucose rise from meal
-        self.pending_insulin_effect = 0  # Tracks pending insulin effect
+        self.pending_glucose_rise = 0 
+        self.pending_insulin_effect = 0  
         return self._get_observation(), {}
 
     def render(self, mode='human'):
@@ -107,12 +98,10 @@ class BloodGlucoseEnvironment(gym.Env):
         return carbs * np.random.uniform(2.0, 4.0)
 
     def _calculate_insulin_effect(self, iob):
-        # Effective insulin sensitivity factor (ISF): 25-50 mg/dL per unit of insulin
         effective_isf = np.random.uniform(25, 50)
         return iob * effective_isf
 
     def _get_basal_rate(self):
-        # Reduced and more physiological basal rates
         return np.random.uniform(0.5, 1.5) if self.is_sleep else np.random.uniform(1.0, 2.0)
 
     def _calculate_reward(self):
@@ -127,7 +116,6 @@ class BloodGlucoseEnvironment(gym.Env):
         else:
             reward = -3.0 - (self.current_bg - self.hyper_threshold) / 10
 
-        # Penalty for rapid BG changes
         bg_change = self.bg_history[-1] - self.bg_history[-2]
         if abs(bg_change) > 20:
             reward -= abs(bg_change) / 20
@@ -147,17 +135,14 @@ class BloodGlucoseEnvironment(gym.Env):
         return 0
 
     def _update_iob(self, insulin_units):
-    # Simple IOB model: exponential decay
-        decay_rate = 0.05  # Adjust as needed
+        decay_rate = 0.05  
         new_iob = self.iob * (1 - decay_rate) + insulin_units
 
         
-        # Fix dimension mismatch by adjusting insulin history or decay_rates
-        decay_rates = np.array([0.7, 0.5, 0.3])  # Example decay rates matching history length
+        decay_rates = np.array([0.7, 0.5, 0.3]) 
         decay_effect = np.dot(decay_rates, self.insulin_history)
     
-        # Update IOB to include decay effect
-        self.iob = max(0, new_iob - decay_effect)  # Ensure IOB remains non-negative
+        self.iob = max(0, new_iob - decay_effect) 
         return self.iob
 
 

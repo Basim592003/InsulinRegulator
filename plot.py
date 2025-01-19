@@ -5,37 +5,28 @@ from scipy.interpolate import make_interp_spline
 from enviorment import BloodGlucoseEnvironment  
 from stable_baselines3 import PPO
 
-# Initialize the environment and load the trained model
 env = BloodGlucoseEnvironment()
 model = PPO.load(r"D:\UNIVERSITY\SEM7\Regulator\Regulator\ppo_blood_glucose_agent.zip")
-# Reset the environment
 obs, info = env.reset()
 
-# Initialize variables to store results
 bg_levels = []
 insulin_doses = []
 rewards = []
 hours = []
 
-# Simulate for a smaller time period (e.g., 24 * 3 hours)
 for _ in range(24 * 3):
-    # Get action from the trained model
     action, _ = model.predict(obs, deterministic=True)
     
-    # Step the environment
     obs, reward, terminated, truncated, info = env.step(action)
     
-    # Store metrics
-    bg_levels.append(obs["blood_glucose"][0])  # Blood glucose level
+    bg_levels.append(obs["blood_glucose"][0])  
     insulin_doses.append(action[0])           # Insulin dose
     rewards.append(reward)                    # Reward
     hours.append(info.get("hour", len(hours)))  # Track hour progression
     
-    # Reset environment if episode ends
     if terminated or truncated:
         obs, info = env.reset()
 
-# Smooth the data using make_interp_spline
 def smooth_curve(data, n_points=500):
     x = np.arange(len(data))
     spline = make_interp_spline(x, data)  # Cubic spline interpolation
@@ -107,20 +98,17 @@ fig.add_trace(go.Scatter(x=extended_meal_times, y=[rewards[t] for t in extended_
                          name="Meal Times", marker=dict(color='red', size=10, symbol='x')), row=3, col=1)
 
 
-# Layout updates
 fig.update_layout(
-    height=850,  # Increase overall figure height
-    width=1500,   # Adjust width to keep proportions
+    height=850,  
+    width=1500,   
     title="Blood Glucose, Insulin Doses, and Rewards Over Time",
     legend_title="Legend",
     showlegend=True
 )
 
-# Update axis titles
 fig.update_yaxes(title_text="Blood Glucose (mg/dL)", row=1, col=1)
 fig.update_yaxes(title_text="Insulin Dose (units)", row=2, col=1)
 fig.update_yaxes(title_text="Reward", row=3, col=1)
-fig.update_xaxes(title_text="Time (Hours)", row=3, col=1)  # Add x-axis label only to the last plot
+fig.update_xaxes(title_text="Time (Hours)", row=3, col=1) 
 
-# Show plot
 fig.show()

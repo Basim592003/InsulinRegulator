@@ -1,7 +1,6 @@
 import gymnasium as gym
 import numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3 import SAC
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback, StopTrainingOnNoModelImprovement, CallbackList
@@ -16,12 +15,10 @@ env = Monitor(env)  # Monitor to track rewards and episodes
 n_actions = env.action_space.shape[-1]
 action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
 
-# --- Callback
-# s ---
-
+# --- Callback ---
 # Checkpoint callback to save the model periodically
 checkpoint_callback = CheckpointCallback(
-    save_freq=10000,
+    save_freq=100000,
     save_path="./logs/checkpoints/",
     name_prefix="rl_model"
 )
@@ -37,7 +34,7 @@ stop_training_callback = StopTrainingOnNoModelImprovement(
 eval_callback = EvalCallback(
     eval_env=env,
     callback_on_new_best=stop_training_callback,
-    best_model_save_path="/logs/best_model/",
+    best_model_save_path="./logs/best_model/",
     log_path="./logs/results/",
     eval_freq=5000,
     deterministic=True,
@@ -54,9 +51,9 @@ model = PPO(
     env=env,
     verbose=1,
     tensorboard_log="./logs/ppo_blood_glucose_tensorboard/",
-    batch_size=512,         # Balanced for stability
+    batch_size=1024,         # Increased batch size for stability
     n_steps=4096,           # Moderate to reduce variance
-    learning_rate=3e-4,     # Lowered for stable learning
+    learning_rate=1e-4,     # Lower learning rate for stable learning
     gamma=0.99,             # Standard discount factor
     gae_lambda=0.95,        # Generalized Advantage Estimation
     ent_coef=0.01,          # Entropy coefficient for exploration
@@ -70,7 +67,7 @@ model = PPO(
 
 # --- Training the Agent ---
 model.learn(
-    total_timesteps=100000,  
+    total_timesteps=5000000,  # Increased timesteps to 1,000,000
     callback=callback
 )
 
