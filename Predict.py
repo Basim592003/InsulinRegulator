@@ -15,7 +15,7 @@ required_columns = ["blood_glucose", "iob", "hour", "is_sleep", "carbs", "bg_his
 missing_columns = [col for col in required_columns if col not in data.columns]
 if missing_columns:
     raise ValueError(f"Missing columns in CSV: {missing_columns}")
-
+###HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
 def prepare_observation(row):
     return {
         "blood_glucose": np.array([row["blood_glucose"]], dtype=np.float32),
